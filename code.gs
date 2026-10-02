@@ -1,5 +1,5 @@
 function getDeals() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet(); //google apps scripts service
   const sheet = spreadsheet.getSheetByName("Deals");
 
   if (!sheet) {
@@ -8,7 +8,7 @@ function getDeals() {
 
   const data = sheet.getDataRange().getValues();
 
-  const rows = data.slice(1);
+  const rows = data.slice(1); //remove header
 
   const deals = rows.map(row => ({
     dealId: row[0],
@@ -36,7 +36,7 @@ function getDeals() {
 
 function calculateFinancials(deal) {
 
-  // 1. Check whether the deal is inside the Commission Plan period.
+  // check whether the deal is inside the Commission Plan period
   const planStart = new Date(2026, 6, 1);  // 1 July 2026
   const planEnd = new Date(2026, 8, 30);   // 30 September 2026
 
@@ -47,11 +47,11 @@ function calculateFinancials(deal) {
     closeDate <= planEnd;
 
 
-  // 2. Calculate ARR.
+  // calculate ARR
   const arr = deal.tcv - deal.implementationFee;
 
 
-  // 3. Determine the ARR commission rate.
+  // determine the ARR commission rate
   let arrCommissionRate;
 
   if (deal.leadSource === "Partnership") {
@@ -61,25 +61,25 @@ function calculateFinancials(deal) {
   }
 
 
-  // 4. Calculate Annual ARR Commission.
+  // calculate Annual ARR Commission
   const arrCommission = arr * arrCommissionRate;
 
 
-  // 5. Determine whether the deal is Direct or Partner.
+  // determine whether the deal is Direct or Partner
   const channel =
     deal.leadSource === "Partnership"
       ? "Partner"
       : "Direct";
 
 
-  // 6. Calculate Implementation Fee as % of TCV.
+  // calculate implementation fee as % of tcv
   const implementationPercentage =
     deal.tcv === 0
       ? 0
       : deal.implementationFee / deal.tcv;
 
 
-  // 7. Determine Implementation Commission Rate.
+  // determine implementation commission rate
   let implementationCommissionRate = 0;
 
   if (implementationPercentage <= 0.10) {
@@ -98,7 +98,7 @@ function calculateFinancials(deal) {
   }
 
 
-  // 8. Calculate Implementation Commission.
+  // calculate implementation commission.
   const implementationCommission =
     deal.implementationFee *
     implementationCommissionRate;
@@ -181,7 +181,7 @@ function runFinancialCalculations() {
     "Payment Terms"
   ];
 
-  // Clear previous calculation results.
+  // clear previous calculation results
   calculationsSheet.clearContents();
 
   calculationsSheet.getRange(
@@ -271,10 +271,10 @@ function moveToMondayIfWeekend(date) {
   const day = result.getDay();
 
   if (day === 6) {
-    // Saturday → Monday
+    // saturday -> monday
     result.setDate(result.getDate() + 2);
   } else if (day === 0) {
-    // Sunday → Monday
+    // sunday -> monday
     result.setDate(result.getDate() + 1);
   }
 
@@ -308,16 +308,14 @@ function getLastFridayOfMonth(year, month) {
 function createAnnualPayouts(deal, financials) {
 
   if (!financials.inPlan) {
-    return [];
+    return [];//no commission payout is generated
   }
 
   const payouts = [];
 
   const closeDate = new Date(deal.closeDate);
 
-  // -------------------------
-  // 1. Advance
-  // -------------------------
+  // advance
 
   const advanceAmount =
     financials.arrCommission * 0.25;
@@ -335,9 +333,7 @@ function createAnnualPayouts(deal, financials) {
     amount: advanceAmount
   });
 
-  // -------------------------
-  // 2. Implementation
-  // -------------------------
+  // implementation
 
   if (financials.implementationCommission > 0) {
 
@@ -369,7 +365,7 @@ function createAnnualPayouts(deal, financials) {
       "50% at signing / 50% at go-live"
     ) {
 
-      // First 50%
+      // first 50%
       const firstHalf =
         implementationAmount * 0.50;
 
@@ -381,7 +377,7 @@ function createAnnualPayouts(deal, financials) {
         amount: firstHalf
       });
 
-      // Second 50% depends on collection
+      // second 50% depends on collection
       const goLiveInvoiceDate =
         new Date(deal.goLiveDate);
 
@@ -422,9 +418,7 @@ function createAnnualPayouts(deal, financials) {
     }
   }
 
-  // -------------------------
-  // 3. Annual invoice
-  // -------------------------
+  // annual invoice
 
   let invoiceDate;
 
@@ -456,9 +450,7 @@ function createAnnualPayouts(deal, financials) {
       deal.paymentTerms
     );
 
-  // -------------------------
-  // 4. Balance
-  // -------------------------
+  // balance
 
   const balanceAmount =
     financials.arrCommission * 0.75;
@@ -513,7 +505,7 @@ function createRecurringPayouts(deal, financials) {
     return [];
   }
 
-  // Advance
+  // advance
   const advanceAmount =
     financials.arrCommission * 0.25;
 
@@ -530,7 +522,7 @@ function createRecurringPayouts(deal, financials) {
     amount: advanceAmount
   });
 
-  // Commission per invoice
+  // commission per invoice
   const invoiceAmount = isMonthly
     ? financials.arr / 12
     : financials.arr / 4;
@@ -571,7 +563,7 @@ function createRecurringPayouts(deal, financials) {
         payoutMonth
       );
 
-    // Don't include payout after cutoff
+    // don't include payout after cutoff
     if (payoutDate > cutoffDate) {
       break;
     }
@@ -635,7 +627,7 @@ function runPayoutCalculations() {
   if (!payoutsSheet) {
     throw new Error("Payouts sheet does not exist.");
   }
-
+      // get all raw deals
   const deals = getDeals();
 
   const headers = [
@@ -651,7 +643,7 @@ function runPayoutCalculations() {
   ];
 
   payoutsSheet.clearContents();
-
+  //write headers(in row 1)
   payoutsSheet
     .getRange(1, 1, 1, headers.length)
     .setValues([headers]);
@@ -659,18 +651,18 @@ function runPayoutCalculations() {
   const output = [];
 
   deals.forEach(deal => {
-
+    //calculate finafncials for every deal
     const financials =
       calculateFinancials(deal);
 
-    // Annual payouts
+    // generate annual payouts
     const annualPayouts =
       createAnnualPayouts(
         deal,
         financials
       );
 
-    // Monthly / Quarterly payouts
+    // monthly/quarterly payouts
     const recurringPayouts =
       createRecurringPayouts(
         deal,
@@ -679,7 +671,7 @@ function runPayoutCalculations() {
 
 let normalPayouts =
   annualPayouts.concat(recurringPayouts);
-
+  //cancellation, if deal was cancelled before go-live, if yes then was any qualifying commission already paid
 if (
   deal.cancellationDate &&
   new Date(deal.cancellationDate) < new Date(deal.goLiveDate)
@@ -698,7 +690,7 @@ const clawbacks =
     deal,
     normalPayouts
   );
-
+    //now combine everything
 const allPayouts =
   normalPayouts.concat(clawbacks);
 
@@ -764,13 +756,13 @@ function createCancellationClawback(deal, existingPayouts) {
 
   let clawbackAmount = 0;
 
-  // Find payouts that were already paid
+  // find payouts that were already paid
   existingPayouts.forEach(payout => {
 
     const payoutDate =
       new Date(payout.payoutDate);
 
-    // Only payouts paid on or before cancellation
+    // only payouts paid on or before cancellation
     if (payoutDate <= cancellationDate) {
 
       if (
@@ -806,7 +798,7 @@ function getCurrentUser() {
 
   const email =
     Session.getActiveUser().getEmail();
-
+    // if not email recieved from google then error
   if (!email) {
     throw new Error(
       "Unable to identify the logged-in Google user."
@@ -865,16 +857,16 @@ function getAuthorizedData() {
       .getDataRange()
       .getValues();
 
-  // Remove headers
+  // remove headers
   const calculationRows =
     calculations.slice(1);
 
   const payoutRows =
     payouts.slice(1);
 
-  // -------------------------
+
   // ADMIN
-  // -------------------------
+
 
   if (user.role === "Admin") {
 
@@ -885,9 +877,7 @@ function getAuthorizedData() {
     };
   }
 
-  // -------------------------
   // MANAGER
-  // -------------------------
 
   if (user.role === "Manager") {
 
@@ -917,7 +907,7 @@ function getAuthorizedData() {
       .map(row =>
         String(row[1]).toLowerCase()
       );
-
+      // shows filteres calc only belonging to manager's team
     const filteredCalculations =
       calculationRows.filter(row =>
         teamNames.includes(
@@ -939,9 +929,7 @@ function getAuthorizedData() {
     };
   }
 
-  // -------------------------
   // AE
-  // -------------------------
 
   if (user.role === "AE") {
 
@@ -976,7 +964,7 @@ function getDashboardData() {
 
   const data = getAuthorizedData();
 
-  // Convert Date objects into strings
+  // convert Date objects into strings
   // so they can safely be sent to the HTML frontend.
   return JSON.parse(
     JSON.stringify(data)
