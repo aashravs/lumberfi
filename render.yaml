@@ -1,0 +1,50 @@
+# ==============================================================================
+# Render Blueprint Specification — Lumberfi Commission Platform
+# Free Tier Architecture:
+#   - Backend: Python Web Service (Free tier)
+#   - Frontend: React / Vite Static Site (Free tier)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FastAPI Backend Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: lumberfi-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: DEFAULT_DEMO_PASSWORD
+        value: demo123
+      - key: CORS_ORIGINS
+        sync: false
+
+  # ----------------------------------------------------------------------------
+  # 2. React / Vite Frontend Static Site
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: lumberfi-frontend
+    env: static
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        sync: false

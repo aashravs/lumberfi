@@ -1,0 +1,11 @@
+# Development / test-only dependencies
+pytest
+httpx
+
+# mongomock 4.3.0 is the latest release and does not accept the `sort` keyword
+# that PyMongo >= 4.10 always passes to bulk ReplaceOne/UpdateOne
+# ("BulkOperationBuilder.add_update() got an unexpected keyword argument 'sort'").
+# PyMongo 4.9.x is the only line that both supports Python 3.13 and predates it.
+# Remove the pymongo pin once mongomock adds `sort` support.
+mongomock==4.3.0
+pymongo>=4.9,<4.10
